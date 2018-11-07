@@ -7,12 +7,28 @@ import utils
 
 import matplotlib.pyplot as plt
 from wordcloud import WordCloud, STOPWORDS, ImageColorGenerator
+from PIL import Image
 
+from sklearn.model_selection import KFold
 
 
 
 def load_data(filename):
 	return json.load(open(os.path.join('../data/', filename)))
+
+def toString(l, mapper, f):
+	l = l//f
+	text = ''
+	for i in range(len(l)):
+		text += l[i]*(mapper[i]+' ')
+
+	return text
+
+def get_cmap(n, name='hsv'):
+    '''Returns a function that maps each index in 0, 1, ..., n-1 to a distinct 
+    RGB color; the keyword argument name must be a standard mpl colormap name.'''
+    return plt.cm.get_cmap(name, n)
+
 
 
 if __name__ == '__main__':
@@ -35,21 +51,71 @@ if __name__ == '__main__':
     	count = np.bincount(y)
     	# for i in range(20):
     	# 	print(cuisine_inverse_mapper[i],":",count[i])
-    	fig = plt.figure()
+    	fig1 = plt.figure()
     	plt.bar(list(range(20)), count, align='edge', tick_label=list(cuisine_mapper.keys()))
     	plt.xticks(rotation=50)
     	plt.savefig('../figs/cuisine-count.jpg')
     	plt.close()
 
-    	count = count//200
-    	text = ''
-    	for i in range(20):
-    		text += count[i]*(cuisine_inverse_mapper[i]+' ')
+    	text_c = toString(count, cuisine_inverse_mapper, 200)
     	
-    	wordcloud = WordCloud(max_words=20, background_color="white", collocations=False).generate(text)
+    	wordcloud = WordCloud(max_words=20, background_color="white", collocations=False).generate(text_c)
     	plt.figure()
     	plt.imshow(wordcloud, interpolation="bilinear")
     	plt.axis("off")
     	plt.savefig('../figs/cuisine-cloud.jpg')
+    	plt.close()
+
+    	count_ingredients = np.array(np.sum(X, axis=0).T)
+    	most_freq_ingre = np.argsort(count_ingredients, axis=None)
+    	count_ingredients = np.sort(np.squeeze(count_ingredients),axis=None)
+
+    	most_freq_ingre = most_freq_ingre[-100:]
+    	plot_ingredients = count_ingredients[-100:]
+    	most_freq_ingre = most_freq_ingre[::-1]
+    	plot_ingredients = plot_ingredients[::-1]
+
+    	x_label = list(map(lambda x: ingredient_inverse_mapper[x], most_freq_ingre))
+
+    	fig2 = plt.figure(figsize=(20,10))
+    	plt.bar(list(range(100)), plot_ingredients, align='edge', tick_label=x_label, color=list(map(lambda x: get_cmap(100)(x), list(range(100)))))
+    	plt.xticks(rotation=50)
+    	plt.savefig('../figs/ingredient-count.jpg')
+    	plt.close()
+
+    	text_i = ''.join([(plot_ingredients[i]//1000)*(x_label[i]+" ") for i in range(40)])
+    	
+
+    	cookingPotMask = np.squeeze(np.array(Image.open("../images/cooking-pot-clipart-black-and-white.png")))
+
+    	wordcloud = WordCloud(background_color="white", collocations=False, max_words=100, mask=cookingPotMask)
+
+    	wordcloud.generate(text_i)
+    	plt.figure()
+    	plt.imshow(wordcloud, interpolation="bilinear")
+    	plt.axis("off")
+    	plt.savefig('../figs/ingredient-cloud.jpg')
+    	plt.close()
+
+    if action == 'bayes':
+    	data = load_data('train.json')
+    	X, y, recipe_mapper, ingredient_mapper, recipe_inverse_mapper, ingredient_inverse_mapper, cuisine_mapper, cuisine_inverse_mapper = utils.load(data)
+    	
+    	# cross-validation to pick the right beta for Laplase smoothing
+    	for train_index, test_index in KFold(n_splits=5).split(X):
+    		print('# of train_index:', len(train_index))
+    		print('# of test_index:', len(test_index))
+    		X_train, X_test = X[train_index], X[test_index]
+    		y_train, y_test = y[train_index], y[test_index]
+
+
+
+
+
+
+
+
+
+
     	
     	
