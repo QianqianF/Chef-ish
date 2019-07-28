@@ -17,6 +17,8 @@ from sklearn.naive_bayes import ComplementNB
 from sklearn.ensemble import BaggingClassifier
 from sklearn.ensemble import RandomForestClassifier
 
+import tensorflow as tf
+
 
 def load_data(filename):
     return json.load(open(os.path.join('../data/', filename)))
@@ -213,6 +215,30 @@ if __name__ == '__main__':
                 plt.scatter(depth,error/5)
 
         plt.show()
+
+    if action == "CNN":
+        data = load_data("train.json")
+        X, y, recipe_mapper, ingredient_mapper, recipe_inverse_mapper, ingredient_inverse_mapper, cuisine_mapper, cuisine_inverse_mapper = utils.load(data)
+
+        print(X.shape)
+        model = tf.keras.models.Sequential([
+          tf.keras.layers.Dense(128, input_shape=(X.shape[1],), activation='relu'),
+          tf.keras.layers.Dropout(0.2),
+          tf.keras.layers.Dense(len(cuisine_mapper), activation='softmax')
+        ])
+
+        model.compile(optimizer='adam',
+                      loss='sparse_categorical_crossentropy',
+                      metrics=['accuracy'])
+
+
+        for train_index, test_index in KFold(n_splits=5).split(X):
+            X_train, X_test = X[train_index], X[test_index]
+            y_train, y_test = y[train_index], y[test_index]
+
+            model.fit(X_train, y_train, epochs=5)
+            model.evaluate(X_test, y_test)
+
 
 
 
