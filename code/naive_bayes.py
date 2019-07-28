@@ -25,7 +25,7 @@ class NaiveBayes:
         p_xy = np.ones((D, C))
         for d in range(D):
             for c in range(C):
-                p_xy[d,c] = np.count_nonzero(X[y == c, d])/counts[c]
+                p_xy[d,c] = (np.count_nonzero(X[y == c, d]) + self.beta)/(counts[c] + 2 * self.beta)
         
 
         self.p_y = p_y
